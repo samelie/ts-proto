@@ -413,6 +413,10 @@ export function isTimestamp(field: FieldDescriptorProto): boolean {
   return field.typeName === '.google.protobuf.Timestamp';
 }
 
+export function isTimeOfDay(field: FieldDescriptorProto): boolean {
+  return field.typeName.endsWith('TimeOfDay');
+}
+
 export function isValueType(ctx: Context, field: FieldDescriptorProto): boolean {
   return valueTypeName(ctx, field.typeName) !== undefined;
 }
@@ -659,7 +663,7 @@ export function requestType(ctx: Context, methodDesc: MethodDescriptorProto, par
     typeName = code`${ctx.utils.DeepPartial}<${typeName}>`;
   }
 
-  if (methodDesc.clientStreaming) {
+  if (ctx.options.nestJs && methodDesc.clientStreaming) {
     return code`${imp('Observable@rxjs')}<${typeName}>`;
   }
   return typeName;

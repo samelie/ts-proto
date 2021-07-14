@@ -6,3 +6,4 @@ build/
 /integration/*/pbjs.d.ts
 coverage/
 yarn-error.log
+.DS_Store

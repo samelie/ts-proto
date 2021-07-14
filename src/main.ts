@@ -27,6 +27,7 @@ import {
   isScalar,
   isStructType,
   isStructTypeName,
+  isTimeOfDay,
   isTimestamp,
   isValueType,
   isWholeNumber,
@@ -37,6 +38,7 @@ import {
   toReaderCall,
   toTypeName,
   valueTypeName,
+  wrapperTypeName,
 } from './types';
 import SourceInfo, { Fields } from './sourceInfo';
 import {
@@ -151,6 +153,8 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
       fileDesc,
       sourceInfo,
       (fullName, message, sInfo, fullProtoTypeName) => {
+        // console.dir({ fileDesc, sourceInfo }, { depth: 8 });
+        // console.dir({ fullName, message, sInfo, fullProtoTypeName }, { depth: 7 });
         const fullTypeName = maybePrefixPackage(fileDesc, fullProtoTypeName);
 
         chunks.push(generateBaseInstanceFactory(ctx, fullName, message, fullTypeName));
@@ -172,6 +176,9 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
         if (options.outputPartialMethods) {
           staticMembers.push(generateFromPartial(ctx, fullName, message));
         }
+        staticMembers.push(generateGetTimestampKeys(ctx, fullName, message));
+        staticMembers.push(generateGetTimestampKeysValue(ctx, fullName, message));
+        staticMembers.push(generateGetMessageKeys(ctx, fullName, message, fileDesc));
 
         staticMembers.push(...generateWrap(ctx, fullTypeName));
         staticMembers.push(...generateUnwrap(ctx, fullTypeName));
@@ -196,6 +203,7 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
 
   let hasServerStreamingMethods = false;
   let hasStreamingMethods = false;
+  let hasClientStreaming = false;
 
   visitServices(fileDesc, sourceInfo, (serviceDesc, sInfo) => {
     if (options.nestJs) {
@@ -380,9 +388,6 @@ function makeLongUtils(options: Options, bytes: ReturnType<typeof makeByteUtils>
     'longToNumber',
     code`
       function longToNumber(long: ${Long}): number {
-        if (long.gt(Number.MAX_SAFE_INTEGER)) {
-          throw new ${bytes.globalThis}.Error("Value is larger than Number.MAX_SAFE_INTEGER")
-        }
         return long.toNumber();
       }
     `
@@ -644,7 +649,7 @@ function makeNiceGrpcServerStreamingMethodResult() {
     code`
       export type ServerStreamingMethodResult<Response> = {
         [Symbol.asyncIterator](): AsyncIterator<Response, void>;
-      };  
+      };
     `
   );
 
@@ -1457,6 +1462,75 @@ function generateToJson(
     }
   });
   chunks.push(code`return obj;`);
+  chunks.push(code`}`);
+  return joinCode(chunks, { on: '\n' });
+}
+
+function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: DescriptorProto): Code {
+  const { options, utils, typeMap } = ctx;
+  const chunks: Code[] = [];
+
+  const timestampKeys: string[] = [];
+
+  chunks.push(code`
+    __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_getTimestampKeys(): string[] {
+  `);
+  // add a check for each incoming field
+  messageDesc.field.forEach((field) => {
+    const fieldName = maybeSnakeToCamel(field.name, options);
+    if (isTimestamp(field) || isTimeOfDay(field)) {
+      timestampKeys.push(`'${fieldName}'`);
+    }
+  });
+  chunks.push(code`return [${timestampKeys.join(',')}];`);
+  chunks.push(code`}`);
+  return joinCode(chunks, { on: '\n' });
+}
+
+function generateGetTimestampKeysValue(ctx: Context, fullName: string, messageDesc: DescriptorProto): Code {
+  const { options, utils, typeMap } = ctx;
+  const chunks: Code[] = [];
+  chunks.push(code`
+      timestampKeys:[] as string[]
+  `);
+  return joinCode(chunks, { on: '\n' });
+}
+
+function generateGetMessageKeys(
+  ctx: Context,
+  fullName: string,
+  messageDesc: DescriptorProto,
+  fileDesc: FileDescriptorProto
+): Code {
+  const { options, utils, typeMap } = ctx;
+  const chunks: Code[] = [];
+
+  const messageKeys: string[] = [];
+  chunks.push(code`
+  __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_getMessageKeys(): {[key:string]:string[]} {
+  `);
+
+  // add a check for each incoming field
+  messageDesc.field.forEach((field) => {
+    const fieldName = maybeSnakeToCamel(field.name, options);
+    const isWrapper = wrapperTypeName(field.typeName);
+    if (
+      !isTimestamp(field) &&
+      !isTimeOfDay(field) &&
+      !isWrapper &&
+      !isPrimitive(field) &&
+      !isEnum(field) &&
+      !field.typeName.includes('google')
+    ) {
+      messageKeys.push(field.typeName);
+    }
+  });
+
+  chunks.push(
+    code`return ${JSON.stringify({
+      [['', fileDesc.package, messageDesc.name].join('.')]: messageKeys,
+    })}`
+  );
   chunks.push(code`}`);
   return joinCode(chunks, { on: '\n' });
 }
