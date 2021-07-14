@@ -45,7 +45,6 @@ export function visit(
 
   const messages = 'messageType' in proto ? proto.messageType : proto.nestedType;
   const childType = isRootFile ? Fields.file.message_type : Fields.message.nested_type;
-
   messages.forEach((message, index) => {
     // I.e. Foo_Bar.Zaz_Inner
     const protoFullName = protoPrefix + message.name;

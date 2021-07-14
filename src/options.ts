@@ -2,6 +2,7 @@ export enum LongOption {
   NUMBER = 'number',
   LONG = 'long',
   STRING = 'string',
+  BIG_INT = 'bigint',
 }
 
 export enum DateOption {

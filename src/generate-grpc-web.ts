@@ -26,7 +26,7 @@ export function generateGrpcClientImpl(
   // Create the constructor(rpc: Rpc)
   chunks.push(code`
     private readonly rpc: Rpc;
-    
+
     constructor(rpc: Rpc) {
   `);
   chunks.push(code`this.rpc = rpc;`);
@@ -69,11 +69,13 @@ function generateRpcMethod(ctx: Context, serviceDesc: ServiceDescriptorProto, me
     ${methodDesc.formattedName}(
       request: ${inputType},
       metadata?: grpc.Metadata,
+      abortController?: AbortController,
     ): ${returns} {
       return this.rpc.${method}(
         ${methodDescName(serviceDesc, methodDesc)},
         ${requestMessage}.fromPartial(request),
         metadata,
+        abortController
       );
     }
   `;
@@ -114,7 +116,11 @@ export function generateGrpcMethodDesc(
   // message's `serializeBinary` method into the data before handing it off to grpc-web.
   //
   // This makes our data look enough like an object/class that grpc-web works just fine.
-  const requestFn = code`{
+  const requestFn = methodDesc.clientStreaming
+    ? code`{
+      serializeBinary() { return new ${imp('Observable@rxjs')}<${inputType}>(); },
+    }`
+    : code`{
     serializeBinary() {
       return ${inputType}.encode(this).finish();
     },
@@ -171,6 +177,7 @@ function generateGrpcWebRpcType(returnObservable: boolean, hasStreamingMethods: 
       methodDesc: T,
       request: any,
       metadata: grpc.Metadata | undefined,
+      abortController: AbortController | undefined,
     ): ${wrapper}<any>;
   `);
 
@@ -179,7 +186,10 @@ function generateGrpcWebRpcType(returnObservable: boolean, hasStreamingMethods: 
       invoke<T extends UnaryMethodDefinitionish>(
         methodDesc: T,
         request: any,
+
+
         metadata: grpc.Metadata | undefined,
+        abortController: AbortController | undefined,
       ): ${Observable}<any>;
     `);
   }
@@ -204,7 +214,7 @@ function generateGrpcWebImpl(returnObservable: boolean, hasStreamingMethods: boo
     export class GrpcWebImpl {
       private host: string;
       private options: ${options};
-      
+
       constructor(host: string, options: ${options}) {
         this.host = host;
         this.options = options;
@@ -230,7 +240,8 @@ function createPromiseUnaryMethod(): Code {
     unary<T extends UnaryMethodDefinitionish>(
       methodDesc: T,
       _request: any,
-      metadata: grpc.Metadata | undefined
+      metadata: grpc.Metadata | undefined,
+      abortController: AbortController | undefined
     ): Promise<any> {
       const request = { ..._request, ...methodDesc.requestType };
       const maybeCombinedMetadata =
@@ -238,7 +249,7 @@ function createPromiseUnaryMethod(): Code {
           ? new ${BrowserHeaders}({ ...this.options?.metadata.headersMap, ...metadata?.headersMap })
           : metadata || this.options.metadata;
       return new Promise((resolve, reject) => {
-      ${grpc}.unary(methodDesc, {
+      const req = ${grpc}.unary(methodDesc, {
           request,
           host: this.host,
           metadata: maybeCombinedMetadata,
@@ -255,6 +266,11 @@ function createPromiseUnaryMethod(): Code {
             }
           },
         });
+        if (abortController) {
+          abortController.signal.onabort = function() {
+            req.close();
+          }
+        }
       });
     }
   `;
@@ -265,7 +281,8 @@ function createObservableUnaryMethod(): Code {
     unary<T extends UnaryMethodDefinitionish>(
       methodDesc: T,
       _request: any,
-      metadata: grpc.Metadata | undefined
+      metadata: grpc.Metadata | undefined,
+      abortController: AbortController | undefined
     ): ${Observable}<any> {
       const request = { ..._request, ...methodDesc.requestType };
       const maybeCombinedMetadata =
@@ -289,7 +306,7 @@ function createObservableUnaryMethod(): Code {
           },
         });
       }).pipe(${take}(1));
-    } 
+    }
   `;
 }
 
@@ -301,7 +318,7 @@ function createInvokeMethod() {
       metadata: grpc.Metadata | undefined
     ): ${Observable}<any> {
       // Status Response Codes (https://developers.google.com/maps-booking/reference/grpc-api/status_codes)
-      const upStreamCodes = [2, 4, 8, 9, 10, 13, 14, 15]; 
+      const upStreamCodes = [2, 4, 8, 9, 10, 13, 14, 15];
       const DEFAULT_TIMEOUT_TIME: number = 3_000;
       const request = { ..._request, ...methodDesc.requestType };
       const maybeCombinedMetadata =

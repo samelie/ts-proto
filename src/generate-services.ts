@@ -73,12 +73,12 @@ export function generateService(
       params.push(code`...rest: any`);
     }
 
-    chunks.push(
-      code`${methodDesc.formattedName}(${joinCode(params, { on: ',' })}): ${responsePromiseOrObservable(
-        ctx,
-        methodDesc
-      )};`
-    );
+      chunks.push(
+        code`${methodDesc.formattedName}(${joinCode(params, { on: ',' })}): ${responsePromiseOrObservable(
+          ctx,
+          methodDesc
+        )};`
+      );
 
     // If this is a batch method, auto-generate the singular version of it
     if (options.context) {
@@ -178,6 +178,7 @@ export function generateServiceClientImpl(
   chunks.push(code`private readonly rpc: ${rpcType};`);
   chunks.push(code`constructor(rpc: ${rpcType}) {`);
   chunks.push(code`this.rpc = rpc;`);
+
   // Bind each FooService method to the FooServiceImpl class
   for (const methodDesc of serviceDesc.method) {
     assertInstanceOf(methodDesc, FormattedMethodDescriptor);
