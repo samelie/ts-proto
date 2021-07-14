@@ -172,6 +172,7 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
         if (options.outputPartialMethods) {
           staticMembers.push(generateFromPartial(ctx, fullName, message));
         }
+        staticMembers.push(generateGetTimestampKeys(ctx, fullName, message));
 
         staticMembers.push(...generateWrap(ctx, fullTypeName));
         staticMembers.push(...generateUnwrap(ctx, fullTypeName));
@@ -196,6 +197,7 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
 
   let hasServerStreamingMethods = false;
   let hasStreamingMethods = false;
+  let hasClientStreaming = false;
 
   visitServices(fileDesc, sourceInfo, (serviceDesc, sInfo) => {
     if (options.nestJs) {
@@ -380,9 +382,6 @@ function makeLongUtils(options: Options, bytes: ReturnType<typeof makeByteUtils>
     'longToNumber',
     code`
       function longToNumber(long: ${Long}): number {
-        if (long.gt(Number.MAX_SAFE_INTEGER)) {
-          throw new ${bytes.globalThis}.Error("Value is larger than Number.MAX_SAFE_INTEGER")
-        }
         return long.toNumber();
       }
     `
@@ -1457,6 +1456,26 @@ function generateToJson(
     }
   });
   chunks.push(code`return obj;`);
+  chunks.push(code`}`);
+  return joinCode(chunks, { on: '\n' });
+}
+
+function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: DescriptorProto): Code {
+  const { options, utils, typeMap } = ctx;
+  const chunks: Code[] = [];
+
+  const timestampKeys: string[] = [];
+  chunks.push(code`
+    getTimestampKeys(): string[] {
+  `);
+  // add a check for each incoming field
+  messageDesc.field.forEach((field) => {
+    const fieldName = maybeSnakeToCamel(field.name, options);
+    if (isTimestamp(field)) {
+      timestampKeys.push(`'${fieldName}'`);
+    }
+  });
+  chunks.push(code`return [${timestampKeys.join(',')}];`);
   chunks.push(code`}`);
   return joinCode(chunks, { on: '\n' });
 }

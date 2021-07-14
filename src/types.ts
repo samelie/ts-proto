@@ -659,7 +659,7 @@ export function requestType(ctx: Context, methodDesc: MethodDescriptorProto, par
     typeName = code`${ctx.utils.DeepPartial}<${typeName}>`;
   }
 
-  if (methodDesc.clientStreaming) {
+  if (ctx.options.nestJs && methodDesc.clientStreaming) {
     return code`${imp('Observable@rxjs')}<${typeName}>`;
   }
   return typeName;
