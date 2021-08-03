@@ -26,20 +26,25 @@ export function generateGrpcClientImpl(
   // Create the constructor(rpc: Rpc)
   chunks.push(code`
     private readonly rpc: Rpc;
-    
+
     constructor(rpc: Rpc) {
   `);
   chunks.push(code`this.rpc = rpc;`);
   // Bind each FooService method to the FooServiceImpl class
   for (const methodDesc of serviceDesc.method) {
     assertInstanceOf(methodDesc, FormattedMethodDescriptor);
-    chunks.push(code`this.${methodDesc.formattedName} = this.${methodDesc.formattedName}.bind(this);`);
+    if (!methodDesc.clientStreaming) {
+      chunks.push(code`this.${methodDesc.formattedName} = this.${methodDesc.formattedName}.bind(this);`);
+    }
   }
   chunks.push(code`}`);
 
   // Create a method for each FooService method
   for (const methodDesc of serviceDesc.method) {
-    chunks.push(generateRpcMethod(ctx, serviceDesc, methodDesc));
+    // not supported by improbable-web
+    if (!methodDesc.clientStreaming) {
+      chunks.push(generateRpcMethod(ctx, serviceDesc, methodDesc));
+    }
   }
 
   chunks.push(code`}`);
@@ -204,7 +209,7 @@ function generateGrpcWebImpl(returnObservable: boolean, hasStreamingMethods: boo
     export class GrpcWebImpl {
       private host: string;
       private options: ${options};
-      
+
       constructor(host: string, options: ${options}) {
         this.host = host;
         this.options = options;
@@ -289,7 +294,7 @@ function createObservableUnaryMethod(): Code {
           },
         });
       }).pipe(${take}(1));
-    } 
+    }
   `;
 }
 
@@ -301,7 +306,7 @@ function createInvokeMethod() {
       metadata: grpc.Metadata | undefined
     ): ${Observable}<any> {
       // Status Response Codes (https://developers.google.com/maps-booking/reference/grpc-api/status_codes)
-      const upStreamCodes = [2, 4, 8, 9, 10, 13, 14, 15]; 
+      const upStreamCodes = [2, 4, 8, 9, 10, 13, 14, 15];
       const DEFAULT_TIMEOUT_TIME: number = 3_000;
       const request = { ..._request, ...methodDesc.requestType };
       const maybeCombinedMetadata =
