@@ -191,6 +191,7 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
 
   let hasServerStreamingMethods = false;
   let hasStreamingMethods = false;
+  let hasClientStreaming = false;
 
   visitServices(fileDesc, sourceInfo, (serviceDesc, sInfo) => {
     if (options.nestJs) {
