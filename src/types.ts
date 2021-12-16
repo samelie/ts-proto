@@ -660,7 +660,10 @@ export function responsePromise(ctx: Context, methodDesc: MethodDescriptorProto)
 }
 
 export function responseObservable(ctx: Context, methodDesc: MethodDescriptorProto): Code {
-  return code`${imp('Observable@rxjs')}<${responseType(ctx, methodDesc)}>`;
+  return code`
+    // @ts-expect-error methodDesc.clientStreaming is not identifying correctly. Normally should just stop tsc error for clientStreaming since not supported by grpc-web
+    ${imp('Observable@rxjs')}<${responseType(ctx, methodDesc)}>
+  `;
 }
 
 export function responsePromiseOrObservable(ctx: Context, methodDesc: MethodDescriptorProto): Code {
