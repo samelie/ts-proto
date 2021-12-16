@@ -33,9 +33,7 @@ export function generateGrpcClientImpl(
   // Bind each FooService method to the FooServiceImpl class
   for (const methodDesc of serviceDesc.method) {
     assertInstanceOf(methodDesc, FormattedMethodDescriptor);
-    if (!methodDesc.clientStreaming) {
-      chunks.push(code`this.${methodDesc.formattedName} = this.${methodDesc.formattedName}.bind(this);`);
-    }
+    chunks.push(code`this.${methodDesc.formattedName} = this.${methodDesc.formattedName}.bind(this);`);
   }
   chunks.push(code`}`);
 
@@ -43,8 +41,8 @@ export function generateGrpcClientImpl(
   for (const methodDesc of serviceDesc.method) {
     // not supported by improbable-web
     if (!methodDesc.clientStreaming) {
-      chunks.push(generateRpcMethod(ctx, serviceDesc, methodDesc));
     }
+    chunks.push(generateRpcMethod(ctx, serviceDesc, methodDesc));
   }
 
   chunks.push(code`}`);
@@ -119,7 +117,11 @@ export function generateGrpcMethodDesc(
   // message's `serializeBinary` method into the data before handing it off to grpc-web.
   //
   // This makes our data look enough like an object/class that grpc-web works just fine.
-  const requestFn = code`{
+  const requestFn = methodDesc.clientStreaming
+    ? code`{
+      serializeBinary() { return new ${imp('Observable@rxjs')}<${inputType}>(); },
+    }`
+    : code`{
     serializeBinary() {
       return ${inputType}.encode(this).finish();
     },
@@ -262,8 +264,8 @@ function createPromiseUnaryMethod(): Code {
           },
         });
         if (abortController) {
-          abortController.onabort = function() {
-            req.cancel();
+          abortController.signal.onabort = function() {
+            req.close();
           }
         }
       });
