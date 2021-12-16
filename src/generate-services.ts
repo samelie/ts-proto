@@ -175,9 +175,6 @@ export function generateServiceClientImpl(
   chunks.push(code`constructor(rpc: ${rpcType}) {`);
   chunks.push(code`this.rpc = rpc;`);
 
-  const supportedServiceMethods = serviceDesc.method.filter((methodDesc) =>
-    methodDesc.clientStreaming && !options.nestJs ? false : true
-  );
   // Bind each FooService method to the FooServiceImpl class
   for (const methodDesc of serviceDesc.method) {
     assertInstanceOf(methodDesc, FormattedMethodDescriptor);
