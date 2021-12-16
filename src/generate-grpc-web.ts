@@ -224,7 +224,8 @@ function createPromiseUnaryMethod(): Code {
     unary<T extends UnaryMethodDefinitionish>(
       methodDesc: T,
       _request: any,
-      metadata: grpc.Metadata | undefined
+      metadata: grpc.Metadata | undefined,
+      abortController: AbortController | undefined
     ): Promise<any> {
       const request = { ..._request, ...methodDesc.requestType };
       const maybeCombinedMetadata =
@@ -232,7 +233,7 @@ function createPromiseUnaryMethod(): Code {
           ? new ${BrowserHeaders}({ ...this.options?.metadata.headersMap, ...metadata?.headersMap })
           : metadata || this.options.metadata;
       return new Promise((resolve, reject) => {
-      ${grpc}.unary(methodDesc, {
+      const req = ${grpc}.unary(methodDesc, {
           request,
           host: this.host,
           metadata: maybeCombinedMetadata,
@@ -249,6 +250,11 @@ function createPromiseUnaryMethod(): Code {
             }
           },
         });
+        if (abortController) {
+          abortController.onabort = function() {
+            req.cancel();
+          }
+        }
       });
     }
   `;
