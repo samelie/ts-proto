@@ -73,15 +73,12 @@ export function generateService(
       params.push(code`...rest: any`);
     }
 
-    const validDefinistion = methodDesc.clientStreaming ? ctx.options.nestJs : true;
-    if (validDefinistion) {
-      chunks.push(
-        code`${methodDesc.formattedName}(${joinCode(params, { on: ',' })}): ${responsePromiseOrObservable(
-          ctx,
-          methodDesc
-        )};`
-      );
-    }
+    chunks.push(
+      code`${methodDesc.formattedName}(${joinCode(params, { on: ',' })}): ${responsePromiseOrObservable(
+        ctx,
+        methodDesc
+      )};`
+    );
 
     // If this is a batch method, auto-generate the singular version of it
     if (options.context) {
