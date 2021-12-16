@@ -644,14 +644,8 @@ export function rawRequestType(ctx: Context, methodDesc: MethodDescriptorProto):
 }
 
 export function requestType(ctx: Context, methodDesc: MethodDescriptorProto): Code {
-<<<<<<< HEAD
   let typeName = rawRequestType(ctx, methodDesc);
   if (methodDesc.clientStreaming) {
-=======
-  let typeName = messageToTypeName(ctx, methodDesc.inputType);
-  const { options } = ctx;
-  if (options.nestJs && methodDesc.clientStreaming) {
->>>>>>> 7f6db70 (fixing grpc-web issue#239 where client streaming was producing incorrect requestType)
     return code`${imp('Observable@rxjs')}<${typeName}>`;
   }
   return typeName;
