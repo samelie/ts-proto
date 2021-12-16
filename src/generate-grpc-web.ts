@@ -178,6 +178,7 @@ function generateGrpcWebRpcType(returnObservable: boolean, hasStreamingMethods: 
       methodDesc: T,
       request: any,
       metadata: grpc.Metadata | undefined,
+      abortController?: AbortController,
     ): ${wrapper}<any>;
   `);
 
@@ -203,6 +204,7 @@ function generateGrpcWebImpl(returnObservable: boolean, hasStreamingMethods: boo
       ${hasStreamingMethods ? 'streamingTransport?: grpc.TransportFactory,' : ``}
       debug?: boolean,
       metadata?: grpc.Metadata,
+      abortController?: AbortController,
     }
   `;
 
@@ -278,7 +280,8 @@ function createObservableUnaryMethod(): Code {
     unary<T extends UnaryMethodDefinitionish>(
       methodDesc: T,
       _request: any,
-      metadata: grpc.Metadata | undefined
+      metadata: grpc.Metadata | undefined,
+      abortController: AbortController | undefined
     ): ${Observable}<any> {
       const request = { ..._request, ...methodDesc.requestType };
       const maybeCombinedMetadata =
