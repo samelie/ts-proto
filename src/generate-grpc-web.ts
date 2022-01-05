@@ -206,6 +206,7 @@ function generateGrpcWebImpl(returnObservable: boolean, hasStreamingMethods: boo
       ${hasStreamingMethods ? 'streamingTransport?: grpc.TransportFactory,' : ``}
       debug?: boolean,
       metadata?: grpc.Metadata,
+      abortController?: AbortController,
     }
   `;
 
