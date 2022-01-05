@@ -61,11 +61,13 @@ function generateRpcMethod(ctx: Context, serviceDesc: ServiceDescriptorProto, me
     ${methodDesc.formattedName}(
       request: ${partialInputType},
       metadata?: grpc.Metadata,
+      abortController?: AbortController,
     ): ${returns} {
       return this.rpc.${method}(
         ${methodDescName(serviceDesc, methodDesc)},
         ${inputType}.fromPartial(request),
         metadata,
+        abortController
       );
     }
   `;
@@ -193,7 +195,6 @@ function generateGrpcWebImpl(returnObservable: boolean, hasStreamingMethods: boo
       ${hasStreamingMethods ? 'streamingTransport?: grpc.TransportFactory,' : ``}
       debug?: boolean,
       metadata?: grpc.Metadata,
-      abortController?: AbortController,
     }
   `;
 
