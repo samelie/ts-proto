@@ -179,6 +179,7 @@ function generateGrpcWebRpcType(returnObservable: boolean, hasStreamingMethods: 
         methodDesc: T,
         request: any,
         metadata: grpc.Metadata | undefined,
+        abortController: AbortController | undefined,
       ): ${Observable}<any>;
     `);
   }
@@ -195,7 +196,6 @@ function generateGrpcWebImpl(returnObservable: boolean, hasStreamingMethods: boo
       ${hasStreamingMethods ? 'streamingTransport?: grpc.TransportFactory,' : ``}
       debug?: boolean,
       metadata?: grpc.Metadata,
-      abortController?: AbortController,
     }
   `;
 
