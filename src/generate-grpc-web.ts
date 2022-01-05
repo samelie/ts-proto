@@ -169,7 +169,7 @@ function generateGrpcWebRpcType(returnObservable: boolean, hasStreamingMethods: 
       methodDesc: T,
       request: any,
       metadata: grpc.Metadata | undefined,
-      abortController?: AbortController,
+      abortController: AbortController | undefined,
     ): ${wrapper}<any>;
   `);
 
