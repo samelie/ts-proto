@@ -39,9 +39,6 @@ export function generateGrpcClientImpl(
 
   // Create a method for each FooService method
   for (const methodDesc of serviceDesc.method) {
-    // not supported by improbable-web
-    if (!methodDesc.clientStreaming) {
-    }
     chunks.push(generateRpcMethod(ctx, serviceDesc, methodDesc));
   }
 
@@ -178,6 +175,8 @@ function generateGrpcWebRpcType(returnObservable: boolean, hasStreamingMethods: 
       invoke<T extends UnaryMethodDefinitionish>(
         methodDesc: T,
         request: any,
+
+
         metadata: grpc.Metadata | undefined,
         abortController: AbortController | undefined,
       ): ${Observable}<any>;
