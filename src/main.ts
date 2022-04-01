@@ -376,9 +376,6 @@ function makeLongUtils(options: Options, bytes: ReturnType<typeof makeByteUtils>
     'longToNumber',
     code`
       function longToNumber(long: ${Long}): number {
-        if (long.gt(Number.MAX_SAFE_INTEGER)) {
-          throw new ${bytes.globalThis}.Error("Value is larger than Number.MAX_SAFE_INTEGER")
-        }
         return long.toNumber();
       }
     `
