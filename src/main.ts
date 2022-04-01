@@ -363,11 +363,29 @@ function makeLongUtils(options: Options, bytes: ReturnType<typeof makeByteUtils>
     `
   );
 
+  const bigIntToLong = conditionalOutput(
+    'bigIntToLong',
+    code`
+      function bigIntToLong(bigint: BigInt) {
+        return ${Long}.fromString(bigint.toString());
+      }
+    `
+  );
+
   const longToString = conditionalOutput(
     'longToString',
     code`
       function longToString(long: ${Long}) {
         return long.toString();
+      }
+    `
+  );
+
+  const longToBigInt = conditionalOutput(
+    'longToBigInt',
+    code`
+      function longToBigInt(long: ${Long}) {
+        return BigInt(long.toString());
       }
     `
   );
@@ -384,7 +402,7 @@ function makeLongUtils(options: Options, bytes: ReturnType<typeof makeByteUtils>
     `
   );
 
-  return { numberToLong, longToNumber, longToString, longInit, Long };
+  return { numberToLong, bigIntToLong, longToNumber, longToString, longToBigInt, longInit, Long };
 }
 
 function makeByteUtils() {
@@ -450,7 +468,7 @@ function makeDeepPartial(options: Options, longs: ReturnType<typeof makeLongUtil
 
   const Builtin = conditionalOutput(
     'Builtin',
-    code`type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;`
+    code`type Builtin = Date | Function | Uint8Array | BigInt | string | number | boolean | undefined;`
   );
 
   // Based on https://github.com/sindresorhus/type-fest/pull/259
@@ -655,7 +673,6 @@ function generateInterfaceDeclaration(
 
   // When oneof=unions, we generate a single property with an ADT per `oneof` clause.
   const processedOneofs = new Set<number>();
-
   messageDesc.field.forEach((fieldDesc, index) => {
     if (isWithinOneOfThatShouldBeUnion(options, fieldDesc)) {
       const { oneofIndex } = fieldDesc;
@@ -813,11 +830,17 @@ function generateDecode(ctx: Context, fullName: string, messageDesc: DescriptorP
         if (options.env === EnvOption.NODE) {
           readSnippet = code`${readSnippet} as Buffer`;
         }
-      } else if (basicLongWireType(field.type) !== undefined) {
+      } else if (isLong(field)) {
         if (options.forceLong === LongOption.LONG) {
           readSnippet = code`${readSnippet} as Long`;
         } else if (options.forceLong === LongOption.STRING) {
           readSnippet = code`${utils.longToString}(${readSnippet} as Long)`;
+        } else if (options.forceLong === LongOption.BIG_INT) {
+          if (field.name === 'key') {
+            readSnippet = code`${utils.longToString}(${readSnippet} as Long)`;
+          } else {
+            readSnippet = code`${utils.longToBigInt}(${readSnippet} as Long)`;
+          }
         } else {
           readSnippet = code`${utils.longToNumber}(${readSnippet} as Long)`;
         }
@@ -941,7 +964,11 @@ function generateEncode(ctx: Context, fullName: string, messageDesc: DescriptorP
       writeSnippet = (place) => code`writer.uint32(${tag}).${toReaderCall(field)}(${toNumber}(${place}))`;
     } else if (isScalar(field) || isEnum(field)) {
       const tag = ((field.number << 3) | basicWireType(field.type)) >>> 0;
-      writeSnippet = (place) => code`writer.uint32(${tag}).${toReaderCall(field)}(${place})`;
+      if (isLong(field) && options.forceLong === LongOption.BIG_INT && field.name !== 'key') {
+        writeSnippet = (place) => code`writer.uint32(${tag}).${toReaderCall(field)}(${utils.bigIntToLong}(${place}))`;
+      } else {
+        writeSnippet = (place) => code`writer.uint32(${tag}).${toReaderCall(field)}(${place})`;
+      }
     } else if (isObjectId(field) && options.useMongoObjectId) {
       const tag = ((field.number << 3) | 2) >>> 0;
       const type = basicTypeName(ctx, field, { keepValueType: true });
@@ -1032,10 +1059,14 @@ function generateEncode(ctx: Context, fullName: string, messageDesc: DescriptorP
       } else {
         // Ideally we'd reuse `writeSnippet` but it has tagging embedded inside of it.
         const tag = ((field.number << 3) | 2) >>> 0;
+        let line = code`writer.${toReaderCall(field)}(v);`;
+        if (isLong(field) && options.forceLong === LongOption.BIG_INT) {
+          line = code`writer.${toReaderCall(field)}(${utils.bigIntToLong}(v))`;
+        }
         const listWriteSnippet = code`
           writer.uint32(${tag}).fork();
           for (const v of message.${fieldName}) {
-            writer.${toReaderCall(field)}(v);
+           ${line}
           }
           writer.ldelim();
         `;
@@ -1158,6 +1189,9 @@ function generateFromJson(ctx: Context, fullName: string, fullTypeName: string, 
         } else if (isLong(field) && options.forceLong === LongOption.LONG) {
           const cstr = capitalize(basicTypeName(ctx, field, { keepValueType: true }).toCodeString());
           return code`${cstr}.fromString(${from})`;
+        } else if (isLong(field) && options.forceLong === LongOption.BIG_INT) {
+          const cstr = capitalize(basicTypeName(ctx, field, { keepValueType: true }).toCodeString());
+          return code`${cstr}(${from})`;
         } else {
           const cstr = capitalize(basicTypeName(ctx, field, { keepValueType: true }).toCodeString());
           return code`${cstr}(${from})`;
@@ -1200,6 +1234,8 @@ function generateFromJson(ctx: Context, fullName: string, fullTypeName: string, 
               }
             } else if (isLong(valueField) && options.forceLong === LongOption.LONG) {
               return code`Long.fromValue(${from} as Long | string)`;
+            } else if (isLong(valueField) && options.forceLong === LongOption.BIG_INT) {
+              return code`${from} as BigInt`;
             } else if (isEnum(valueField)) {
               return code`${from} as ${valueType}`;
             } else {
@@ -1374,6 +1410,8 @@ function generateToJson(
           return code`${from}`;
         } else if (isTimestamp(valueType) && options.useDate === DateOption.TIMESTAMP) {
           return code`${utils.fromTimestamp}(${from}).toISOString()`;
+        } else if (isLong(valueType) && options.forceLong === LongOption.BIG_INT) {
+          return code`${from}.toString()`;
         } else if (isLong(valueType) && options.forceLong === LongOption.LONG) {
           return code`${from}.toString()`;
         } else if (isWholeNumber(valueType) && !(isLong(valueType) && options.forceLong === LongOption.STRING)) {
@@ -1400,6 +1438,8 @@ function generateToJson(
         } else {
           return code`${utils.base64FromBytes}(${from} !== undefined ? ${from} : ${defaultValue(ctx, field)})`;
         }
+      } else if (isLong(field) && options.forceLong === LongOption.BIG_INT) {
+        return code`${from}.toString()`;
       } else if (isLong(field) && options.forceLong === LongOption.LONG) {
         const v = isWithinOneOf(field) ? 'undefined' : defaultValue(ctx, field);
         return code`(${from} || ${v}).toString()`;
@@ -1475,6 +1515,8 @@ function generateFromPartial(ctx: Context, fullName: string, messageDesc: Descri
     const readSnippet = (from: string): Code => {
       if ((isLong(field) || isLongValueType(field)) && options.forceLong === LongOption.LONG) {
         return code`Long.fromValue(${from})`;
+      } else if ((isLong(field) || isLongValueType(field)) && options.forceLong === LongOption.BIG_INT) {
+        return code`${from}`;
       } else if (isObjectId(field) && options.useMongoObjectId) {
         return code`${from} as mongodb.ObjectId`;
       } else if (
@@ -1493,6 +1535,8 @@ function generateFromPartial(ctx: Context, fullName: string, messageDesc: Descri
               return code`${from} as ${valueType}`;
             } else if (isLong(valueField) && options.forceLong === LongOption.LONG) {
               return code`Long.fromValue(${from})`;
+            } else if (isLong(valueField) && options.forceLong === LongOption.BIG_INT) {
+              return code`${from}`;
             } else {
               const cstr = capitalize(valueType.toCodeString());
               return code`${cstr}(${from})`;

@@ -84,9 +84,13 @@ export function basicTypeName(
     case FieldDescriptorProto_Type.TYPE_UINT64:
     case FieldDescriptorProto_Type.TYPE_SINT64:
     case FieldDescriptorProto_Type.TYPE_FIXED64:
-    case FieldDescriptorProto_Type.TYPE_SFIXED64:
+    case FieldDescriptorProto_Type.TYPE_SFIXED64: {
+      if (field.name === 'key' && ctx.options.forceLong === LongOption.BIG_INT) {
+        return code`string`;
+      }
       // this handles 2^53, Long is only needed for 2^64; this is effectively pbjs's forceNumber
       return longTypeName(ctx);
+    }
     case FieldDescriptorProto_Type.TYPE_BOOL:
       return code`boolean`;
     case FieldDescriptorProto_Type.TYPE_STRING:
@@ -202,6 +206,11 @@ export function defaultValue(ctx: Context, field: FieldDescriptorProto): any {
         return code`${utils.Long}.UZERO`;
       } else if (options.forceLong === LongOption.STRING) {
         return '"0"';
+      } else if (options.forceLong === LongOption.BIG_INT) {
+        if (field.name === 'key') {
+          return '"0"';
+        }
+        return code`BigInt(0)`;
       } else {
         return 0;
       }
@@ -212,6 +221,11 @@ export function defaultValue(ctx: Context, field: FieldDescriptorProto): any {
         return code`${utils.Long}.ZERO`;
       } else if (options.forceLong === LongOption.STRING) {
         return '"0"';
+      } else if (options.forceLong === LongOption.BIG_INT) {
+        if (field.name === 'key') {
+          return '"0"';
+        }
+        return code`BigInt(0)`;
       } else {
         return 0;
       }
@@ -272,6 +286,11 @@ export function notDefaultCheck(
         return code`${maybeNotUndefinedAnd} !${place}.isZero()`;
       } else if (options.forceLong === LongOption.STRING) {
         return code`${maybeNotUndefinedAnd} ${place} !== "0"`;
+      } else if (options.forceLong === LongOption.BIG_INT) {
+        if (field.name === 'key') {
+          return code`${maybeNotUndefinedAnd} ${place} !== "0"`;
+        }
+        return code`${maybeNotUndefinedAnd} ${place} !== ${code`BigInt(0)`}`;
       } else {
         return code`${maybeNotUndefinedAnd} ${place} !== 0`;
       }
@@ -517,6 +536,8 @@ function longTypeName(ctx: Context): Code {
     return code`${utils.Long}`;
   } else if (options.forceLong === LongOption.STRING) {
     return code`string`;
+  } else if (options.forceLong === LongOption.BIG_INT) {
+    return code`BigInt`;
   } else {
     return code`number`;
   }
@@ -582,7 +603,10 @@ export function toTypeName(ctx: Context, messageDesc: DescriptorProto, field: Fi
   if (isRepeated(field)) {
     const mapType = detectMapType(ctx, messageDesc, field);
     if (mapType) {
-      const { keyType, valueType } = mapType;
+      const { keyType, keyField, valueType } = mapType;
+      if (ctx.options.forceLong === LongOption.BIG_INT) {
+        return code`{ [key: ${toTypeName(ctx, messageDesc, keyField)} ]: ${valueType} }`;
+      }
       return code`{ [key: ${keyType} ]: ${valueType} }`;
     }
     return code`${type}[]`;
@@ -615,7 +639,6 @@ export function toTypeName(ctx: Context, messageDesc: DescriptorProto, field: Fi
   ) {
     return code`${type} | undefined`;
   }
-
   return type;
 }
 
@@ -642,7 +665,7 @@ export function detectMapType(
     const [keyField, valueField] = mapType.field;
     const keyType = toTypeName(ctx, messageDesc, keyField);
     // use basicTypeName because we don't need the '| undefined'
-    const valueType = basicTypeName(ctx, valueField);
+    const valueType = basicTypeName(ctx, valueField, {});
     return { messageDesc: mapType, keyField, keyType, valueField, valueType };
   }
   return undefined;
