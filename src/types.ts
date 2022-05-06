@@ -413,6 +413,10 @@ export function isTimestamp(field: FieldDescriptorProto): boolean {
   return field.typeName === '.google.protobuf.Timestamp';
 }
 
+export function isTimeOfDay(field: FieldDescriptorProto): boolean {
+  return field.typeName.includes('TimeOfDay');
+}
+
 export function isValueType(ctx: Context, field: FieldDescriptorProto): boolean {
   return valueTypeName(ctx, field.typeName) !== undefined;
 }

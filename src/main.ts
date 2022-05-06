@@ -27,6 +27,7 @@ import {
   isScalar,
   isStructType,
   isStructTypeName,
+  isTimeOfDay,
   isTimestamp,
   isValueType,
   isWholeNumber,
@@ -643,7 +644,7 @@ function makeNiceGrpcServerStreamingMethodResult() {
     code`
       export type ServerStreamingMethodResult<Response> = {
         [Symbol.asyncIterator](): AsyncIterator<Response, void>;
-      };  
+      };
     `
   );
 
@@ -1471,7 +1472,7 @@ function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: D
   // add a check for each incoming field
   messageDesc.field.forEach((field) => {
     const fieldName = maybeSnakeToCamel(field.name, options);
-    if (isTimestamp(field)) {
+    if (isTimestamp(field) || isTimeOfDay(field)) {
       timestampKeys.push(`'${fieldName}'`);
     }
   });
