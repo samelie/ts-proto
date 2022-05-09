@@ -414,7 +414,7 @@ export function isTimestamp(field: FieldDescriptorProto): boolean {
 }
 
 export function isTimeOfDay(field: FieldDescriptorProto): boolean {
-  return field.typeName.includes('TimeOfDay');
+  return field.typeName.endsWith('TimeOfDay');
 }
 
 export function isValueType(ctx: Context, field: FieldDescriptorProto): boolean {
