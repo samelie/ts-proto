@@ -38,6 +38,7 @@ import {
   toReaderCall,
   toTypeName,
   valueTypeName,
+  wrapperTypeName,
 } from './types';
 import SourceInfo, { Fields } from './sourceInfo';
 import {
@@ -174,6 +175,7 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
           staticMembers.push(generateFromPartial(ctx, fullName, message));
         }
         staticMembers.push(generateGetTimestampKeys(ctx, fullName, message));
+        staticMembers.push(generateGetMessageKeys(ctx, fullName, message));
 
         staticMembers.push(...generateWrap(ctx, fullTypeName));
         staticMembers.push(...generateUnwrap(ctx, fullTypeName));
@@ -1477,6 +1479,27 @@ function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: D
     }
   });
   chunks.push(code`return [${timestampKeys.join(',')}];`);
+  chunks.push(code`}`);
+  return joinCode(chunks, { on: '\n' });
+}
+
+function generateGetMessageKeys(ctx: Context, fullName: string, messageDesc: DescriptorProto): Code {
+  const { options, utils, typeMap } = ctx;
+  const chunks: Code[] = [];
+
+  const messageKeys: string[] = [];
+  chunks.push(code`
+    getMessageKeys(): string[] {
+  `);
+  // add a check for each incoming field
+  messageDesc.field.forEach((field) => {
+    const fieldName = maybeSnakeToCamel(field.name, options);
+    const isWrapper = wrapperTypeName(field.typeName);
+    if (!isTimestamp(field) && !isTimeOfDay(field) && !isWrapper && !isPrimitive(field) && !isEnum(field)) {
+      messageKeys.push(`'${fieldName}'`);
+    }
+  });
+  chunks.push(code`return [${messageKeys.join(',')}];`);
   chunks.push(code`}`);
   return joinCode(chunks, { on: '\n' });
 }
