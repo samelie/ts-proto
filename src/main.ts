@@ -154,7 +154,7 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
       fileDesc,
       sourceInfo,
       (fullName, message, sInfo, fullProtoTypeName) => {
-        console.dir({ fileDesc, sourceInfo }, { depth: 8 });
+        // console.dir({ fileDesc, sourceInfo }, { depth: 8 });
         // console.dir({ fullName, message, sInfo, fullProtoTypeName }, { depth: 7 });
         const fullTypeName = maybePrefixPackage(fileDesc, fullProtoTypeName);
 
@@ -1497,8 +1497,9 @@ function generateGetMessageKeys(
 
   const messageKeys: string[] = [];
   chunks.push(code`
-    getMessageKeys(): string[] {
+    getMessageKeys(): {[key:string]:string} {
   `);
+  messageDesc.name;
   // add a check for each incoming field
   messageDesc.field.forEach((field) => {
     messageKeys.push(`'${join(fileDesc.package, fileDesc.name)}'`);
@@ -1508,7 +1509,12 @@ function generateGetMessageKeys(
       // messageKeys.push(`'${fieldName}'`);
     }
   });
-  chunks.push(code`return [${messageKeys.join(',')}];`);
+
+  chunks.push(
+    code`return ${JSON.stringify({
+      [join(fileDesc.package, fileDesc.name)]: messageDesc.name,
+    })}`
+  );
   chunks.push(code`}`);
   return joinCode(chunks, { on: '\n' });
 }
