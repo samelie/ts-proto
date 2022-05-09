@@ -1472,6 +1472,9 @@ function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: D
 
   const timestampKeys: string[] = [];
   chunks.push(code`
+    timestampKeys: string[] : []
+  `);
+  chunks.push(code`
     getTimestampKeys(): string[] {
   `);
   // add a check for each incoming field
