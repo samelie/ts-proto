@@ -1472,7 +1472,7 @@ function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: D
 
   const timestampKeys: string[] = [];
   chunks.push(code`
-    timestampKeys: string[] : []
+      get timestampKeys(): string[] {return []},
   `);
   chunks.push(code`
     getTimestampKeys(): string[] {
