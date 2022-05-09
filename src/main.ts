@@ -1492,7 +1492,7 @@ function generateGetTimestampKeysValue(ctx: Context, fullName: string, messageDe
   const { options, utils, typeMap } = ctx;
   const chunks: Code[] = [];
   chunks.push(code`
-      get timestampKeys(): string[] { return [] }
+      timestampKeys:[] as string[]
   `);
   return joinCode(chunks, { on: '\n' });
 }
