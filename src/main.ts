@@ -1510,8 +1510,6 @@ function generateGetMessageKeys(
       // messageKeys.push(`'${fieldName}'`);
     }
   });
-  console.dir(messageDesc);
-  // console.dir(fileDesc);
 
   chunks.push(
     code`return ${JSON.stringify({
