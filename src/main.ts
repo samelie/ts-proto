@@ -78,6 +78,7 @@ import { ConditionalOutput } from 'ts-poet/build/ConditionalOutput';
 import { generateGrpcJsService } from './generate-grpc-js';
 import { generateGenericServiceDefinition } from './generate-generic-service-definition';
 import { generateNiceGrpcService } from './generate-nice-grpc';
+import { join } from 'path';
 
 export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [string, Code] {
   const { options, utils } = ctx;
@@ -153,6 +154,8 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
       fileDesc,
       sourceInfo,
       (fullName, message, sInfo, fullProtoTypeName) => {
+        console.dir({ fileDesc, sourceInfo }, { depth: 8 });
+        // console.dir({ fullName, message, sInfo, fullProtoTypeName }, { depth: 7 });
         const fullTypeName = maybePrefixPackage(fileDesc, fullProtoTypeName);
 
         chunks.push(generateBaseInstanceFactory(ctx, fullName, message, fullTypeName));
@@ -175,7 +178,7 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
           staticMembers.push(generateFromPartial(ctx, fullName, message));
         }
         staticMembers.push(generateGetTimestampKeys(ctx, fullName, message));
-        staticMembers.push(generateGetMessageKeys(ctx, fullName, message));
+        staticMembers.push(generateGetMessageKeys(ctx, fullName, message, fileDesc));
 
         staticMembers.push(...generateWrap(ctx, fullTypeName));
         staticMembers.push(...generateUnwrap(ctx, fullTypeName));
@@ -1483,7 +1486,12 @@ function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: D
   return joinCode(chunks, { on: '\n' });
 }
 
-function generateGetMessageKeys(ctx: Context, fullName: string, messageDesc: DescriptorProto): Code {
+function generateGetMessageKeys(
+  ctx: Context,
+  fullName: string,
+  messageDesc: DescriptorProto,
+  fileDesc: FileDescriptorProto
+): Code {
   const { options, utils, typeMap } = ctx;
   const chunks: Code[] = [];
 
@@ -1493,10 +1501,11 @@ function generateGetMessageKeys(ctx: Context, fullName: string, messageDesc: Des
   `);
   // add a check for each incoming field
   messageDesc.field.forEach((field) => {
+    messageKeys.push(`'${join(fileDesc.package, fileDesc.name)}'`);
     const fieldName = maybeSnakeToCamel(field.name, options);
     const isWrapper = wrapperTypeName(field.typeName);
     if (!isTimestamp(field) && !isTimeOfDay(field) && !isWrapper && !isPrimitive(field) && !isEnum(field)) {
-      messageKeys.push(`'${fieldName}'`);
+      // messageKeys.push(`'${fieldName}'`);
     }
   });
   chunks.push(code`return [${messageKeys.join(',')}];`);
