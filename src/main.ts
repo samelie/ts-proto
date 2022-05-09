@@ -178,6 +178,7 @@ export function generateFile(ctx: Context, fileDesc: FileDescriptorProto): [stri
           staticMembers.push(generateFromPartial(ctx, fullName, message));
         }
         staticMembers.push(generateGetTimestampKeys(ctx, fullName, message));
+        staticMembers.push(generateGetTimestampKeysValue(ctx, fullName, message));
         staticMembers.push(generateGetMessageKeys(ctx, fullName, message, fileDesc));
 
         staticMembers.push(...generateWrap(ctx, fullTypeName));
@@ -1471,9 +1472,7 @@ function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: D
   const chunks: Code[] = [];
 
   const timestampKeys: string[] = [];
-  chunks.push(code`
-      get timestampKeys(): string[] {return []},
-  `);
+
   chunks.push(code`
     getTimestampKeys(): string[] {
   `);
@@ -1486,6 +1485,15 @@ function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: D
   });
   chunks.push(code`return [${timestampKeys.join(',')}];`);
   chunks.push(code`}`);
+  return joinCode(chunks, { on: '\n' });
+}
+
+function generateGetTimestampKeysValue(ctx: Context, fullName: string, messageDesc: DescriptorProto): Code {
+  const { options, utils, typeMap } = ctx;
+  const chunks: Code[] = [];
+  chunks.push(code`
+      get timestampKeys(): string[] { return [] }
+  `);
   return joinCode(chunks, { on: '\n' });
 }
 
