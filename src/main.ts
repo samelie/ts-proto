@@ -1497,22 +1497,25 @@ function generateGetMessageKeys(
 
   const messageKeys: string[] = [];
   chunks.push(code`
-    getMessageKeys(): {[key:string]:string} {
+    getMessageKeys(): {[key:string]:string[]} {
   `);
-  messageDesc.name;
+
   // add a check for each incoming field
   messageDesc.field.forEach((field) => {
-    messageKeys.push(`'${join(fileDesc.package, fileDesc.name)}'`);
+    // messageKeys.push(`'${join(fileDesc.package, fileDesc.name)}'`);
     const fieldName = maybeSnakeToCamel(field.name, options);
     const isWrapper = wrapperTypeName(field.typeName);
     if (!isTimestamp(field) && !isTimeOfDay(field) && !isWrapper && !isPrimitive(field) && !isEnum(field)) {
+      messageKeys.push(field.typeName);
       // messageKeys.push(`'${fieldName}'`);
     }
   });
+  console.dir(messageDesc);
+  // console.dir(fileDesc);
 
   chunks.push(
     code`return ${JSON.stringify({
-      [join(fileDesc.package, fileDesc.name)]: messageDesc.name,
+      [['', fileDesc.package, messageDesc.name].join('.')]: messageKeys,
     })}`
   );
   chunks.push(code`}`);
