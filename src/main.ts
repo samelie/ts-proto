@@ -1505,9 +1505,15 @@ function generateGetMessageKeys(
     // messageKeys.push(`'${join(fileDesc.package, fileDesc.name)}'`);
     const fieldName = maybeSnakeToCamel(field.name, options);
     const isWrapper = wrapperTypeName(field.typeName);
-    if (!isTimestamp(field) && !isTimeOfDay(field) && !isWrapper && !isPrimitive(field) && !isEnum(field)) {
+    if (
+      !isTimestamp(field) &&
+      !isTimeOfDay(field) &&
+      !isWrapper &&
+      !isPrimitive(field) &&
+      !isEnum(field) &&
+      !field.typeName.includes('google')
+    ) {
       messageKeys.push(field.typeName);
-      // messageKeys.push(`'${fieldName}'`);
     }
   });
 
