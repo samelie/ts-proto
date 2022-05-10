@@ -1474,7 +1474,7 @@ function generateGetTimestampKeys(ctx: Context, fullName: string, messageDesc: D
   const timestampKeys: string[] = [];
 
   chunks.push(code`
-    getTimestampKeys(): string[] {
+    __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_getTimestampKeys(): string[] {
   `);
   // add a check for each incoming field
   messageDesc.field.forEach((field) => {
@@ -1508,7 +1508,7 @@ function generateGetMessageKeys(
 
   const messageKeys: string[] = [];
   chunks.push(code`
-    getMessageKeys(): {[key:string]:string[]} {
+  __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_getMessageKeys(): {[key:string]:string[]} {
   `);
 
   // add a check for each incoming field
