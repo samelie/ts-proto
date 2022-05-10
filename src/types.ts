@@ -413,6 +413,10 @@ export function isTimestamp(field: FieldDescriptorProto): boolean {
   return field.typeName === '.google.protobuf.Timestamp';
 }
 
+export function isTimeOfDay(field: FieldDescriptorProto): boolean {
+  return field.typeName.endsWith('TimeOfDay');
+}
+
 export function isValueType(ctx: Context, field: FieldDescriptorProto): boolean {
   return valueTypeName(ctx, field.typeName) !== undefined;
 }
@@ -665,8 +669,12 @@ export function requestType(ctx: Context, methodDesc: MethodDescriptorProto, par
   return typeName;
 }
 
-export function responseType(ctx: Context, methodDesc: MethodDescriptorProto): Code {
-  return messageToTypeName(ctx, methodDesc.outputType, { keepValueType: true });
+export function responseType(
+  ctx: Context,
+  methodDesc: MethodDescriptorProto,
+  typeOptions: { keepValueType?: boolean; repeated?: boolean } = {}
+): Code {
+  return messageToTypeName(ctx, methodDesc.outputType, typeOptions);
 }
 
 export function responsePromise(ctx: Context, methodDesc: MethodDescriptorProto): Code {

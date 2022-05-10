@@ -1,3 +1,65 @@
+# [1.112.0](https://github.com/stephenh/ts-proto/compare/v1.111.0...v1.112.0) (2022-05-02)
+
+
+### Bug Fixes
+
+* update codegen for `nice-grpc` ([#561](https://github.com/stephenh/ts-proto/issues/561)) ([d503f67](https://github.com/stephenh/ts-proto/commit/d503f677922402e880b5d8502b3d8bc099b7f39d))
+
+
+### Features
+
+* add support for generating `nice-grpc` server and client stubs ([#555](https://github.com/stephenh/ts-proto/issues/555)) ([8c19361](https://github.com/stephenh/ts-proto/commit/8c19361ede9a7a039acf3a1375913d012b0fcb7d)), closes [#545](https://github.com/stephenh/ts-proto/issues/545)
+
+# [1.111.0](https://github.com/stephenh/ts-proto/compare/v1.110.4...v1.111.0) (2022-05-01)
+
+
+### Features
+
+* include service and definition types with implementations ([#552](https://github.com/stephenh/ts-proto/issues/552)) ([6b896f4](https://github.com/stephenh/ts-proto/commit/6b896f4b7f4ba0f0d97730767421786171646aea))
+
+## [next](https://github.com/stephenh/ts-proto/compare/v1.110.4...main) (????-??-??)
+
+### Features
+
+* When outputing service and service definition implementations, include types. Eg, before:
+
+  ```ts
+  export const TestDefinition = {
+    name: 'Test',
+    fullName: 'simple.Test',
+    methods: {
+      …
+    },
+  } as const;
+  ```
+
+  Now:
+
+  ```ts
+  export type TestDefinition = typeof TestDefinition;
+  export const TestDefinition = {
+    name: 'Test',
+    fullName: 'simple.Test',
+    methods: {
+      …
+    },
+  } as const;
+  ```
+
+## [1.110.4](https://github.com/stephenh/ts-proto/compare/v1.110.3...v1.110.4) (2022-04-08)
+
+
+### Bug Fixes
+
+* Use Uint8Array.forEach in base64FromBytes ([#544](https://github.com/stephenh/ts-proto/issues/544)) ([c7641ce](https://github.com/stephenh/ts-proto/commit/c7641ceb6a1c9da234245b9d808b2ded899dbbbc))
+
+## [1.110.3](https://github.com/stephenh/ts-proto/compare/v1.110.2...v1.110.3) (2022-04-08)
+
+
+### Bug Fixes
+
+* regression in being able to return a Date as a GRPC return value ([#534](https://github.com/stephenh/ts-proto/issues/534)) ([22b76ec](https://github.com/stephenh/ts-proto/commit/22b76eccfc0d26309aab9e454de31ef020595be8))
+
 ## [1.110.2](https://github.com/stephenh/ts-proto/compare/v1.110.1...v1.110.2) (2022-03-27)
 
 

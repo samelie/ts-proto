@@ -42,6 +42,7 @@ function generateMessageType(ctx: Context): Code {
   if (ctx.options.outputPartialMethods) {
     chunks.push(code`fromPartial(object: ${ctx.utils.DeepPartial}<Message>): Message;`);
   }
+  chunks.push(code`getTimestampKeys(): string[];`);
 
   chunks.push(code`}`);
 
